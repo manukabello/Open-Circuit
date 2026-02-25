@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Circuit | 260-270 12th Ave</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+
+        body { margin: 0; background-color: #12151a; overflow: hidden; font-family: sans-serif; }
+        
+        /* Pixel Branding Header */
+        #header {
+            position: absolute; top: 40px; left: 40px; color: #52beb7;
+            pointer-events: none; border-left: 3px solid #52beb7; padding-left: 20px;
+        }
+        
+        /* Custom Dot-Matrix Effect for Title */
+        #header h1 { 
+            margin: 0; 
+            font-family: 'DotGothic16', sans-serif; 
+            font-size: 42px; 
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 0px #000;
+        }
+        
+        #header p { 
+            margin: 5px 0; 
+            font-family: 'DotGothic16', sans-serif;
+            font-size: 16px; 
+            color: #52beb7; 
+            opacity: 0.8;
+        }
+
+        /* HUD Panel */
+        #info-panel {
+            position: absolute; top: 40px; right: 40px; width: 320px;
+            padding: 25px; background: rgba(0, 0, 0, 0.7);
+            border-top: 1px solid #52beb7; color: white; display: none;
+            backdrop-filter: blur(10px); pointer-events: none;
+        }
+        #info-panel .label { font-family: 'DotGothic16', sans-serif; font-size: 12px; color: #52beb7; margin-bottom: 5px; }
+        #info-panel h3 { margin: 0 0 15px 0; font-size: 24px; font-weight: bold; }
+        #info-panel p { margin: 0; font-size: 14px; line-height: 1.6; color: #ccc; }
+
+        #hint { position: absolute; bottom: 30px; width: 100%; text-align: center; color: #444; font-size: 11px; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Open Circuit</h1>
+        <p>260-270 12th Ave, NYC<br>140386880</p>
+    </div>
+
+    <div id="info-panel">
+        <div class="label" id="tag">SYSTEM</div>
+        <h3 id="program-title">TITLE</h3>
+        <p id="program-desc">DESCRIPTION</p>
+    </div>
+
+    <div id="hint">MOUSE1: ROTATE // HOVER: DATASTREAM ACCESS</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x12151a); // Dark UI Blue-Black
+
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 100000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Lights
+        scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+        sun.position.set(2000, 4000, 2000);
+        scene.add(sun);
+
+        // Mapped Program Data
+        const content = [
+            { 
+                title: "Media Museum Spaces", 
+                tag: "Exhibition Vol.", 
+                desc: "Fluid, multi-sensory environments hosting a variety of media experiences representing the relentless cultural motion of New York.", 
+                color: 0xff7700, // Vibrant Orange
+                opacity: 0.6
+            },
+            { 
+                title: "The Framework", 
+                tag: "System Lattice", 
+                desc: "A stable structural network of nodes and pieces forming a stable but ever-growing and changing foundation for the digital museum.", 
+                color: 0xffffff, // White
+                opacity: 1.0
+            }
+        ];
+
+        const loader = new OBJLoader();
+        let volumes = [];
+
+        loader.load('Massing_8_c.obj', (obj) => {
+            const box = new THREE.Box3().setFromObject(obj);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            obj.position.set(-center.x, -center.y, -center.z);
+
+            let i = 0;
+            obj.traverse((child) => {
+                if (child.isMesh) {
+                    const data = content[i] || { color: 0x333333, opacity: 0.5 };
+                    child.userData = data; 
+                    child.material = new THREE.MeshStandardMaterial({ 
+                        color: data.color,
+                        transparent: data.opacity < 1.0,
+                        opacity: data.opacity,
+                        depthWrite: data.opacity >= 1.0, // Fixes the "dark flickering" transparency issue
+                        roughness: 0.3,
+                        metalness: 0.1
+                    });
+                    volumes.push(child);
+                    i++;
+                }
+            });
+
+            scene.add(obj);
+            const dist = Math.max(size.x, size.y, size.z);
+            camera.position.set(dist * 1.4, dist * 0.8, dist * 1.4);
+            controls.target.set(0, 0, 0);
+        });
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const panel = document.getElementById('info-panel');
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(volumes);
+
+            if (hits.length > 0) {
+                const info = hits[0].object.userData;
+                panel.style.display = 'block';
+                document.getElementById('program-title').innerText = info.title;
+                document.getElementById('tag').innerText = info.tag;
+                document.getElementById('program-desc').innerText = info.desc;
+                hits[0].object.material.emissive.setHex(0x52beb7);
+                hits[0].object.material.emissiveIntensity = 0.4;
+            } else {
+                panel.style.display = 'none';
+                volumes.forEach(v => v.material.emissiveIntensity = 0);
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
