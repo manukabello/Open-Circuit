@@ -1,181 +1,1452 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Open Circuit | 260-270 12th Ave</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+<meta charset="UTF-8">
+<title>OPEN. CIRCUIT. — Architectural System</title>
+<link rel="icon" type="image/svg+xml" href="cursor.svg">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@300;400;500&family=Share+Tech+Mono&display=swap');
+*{cursor:url('cursor.svg') 16 16,crosshair;box-sizing:border-box}
+:root{
+    --cyan:#00e5ff;
+    --amber:#ffb300;
+    --grid:rgba(0,229,255,0.06);
+}
+body{margin:0;overflow:hidden;background:#000;font-family:'Rajdhani',sans-serif}
 
-        body { margin: 0; background-color: #12151a; overflow: hidden; font-family: sans-serif; }
-        
-        /* Pixel Branding Header */
-        #header {
-            position: absolute; top: 40px; left: 40px; color: #52beb7;
-            pointer-events: none; border-left: 3px solid #52beb7; padding-left: 20px;
-        }
-        
-        /* Custom Dot-Matrix Effect for Title */
-        #header h1 { 
-            margin: 0; 
-            font-family: 'DotGothic16', sans-serif; 
-            font-size: 42px; 
-            font-weight: bold;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            text-shadow: 2px 2px 0px #000;
-        }
-        
-        #header p { 
-            margin: 5px 0; 
-            font-family: 'DotGothic16', sans-serif;
-            font-size: 16px; 
-            color: #52beb7; 
-            opacity: 0.8;
-        }
+/* Scanline overlay */
+body::before{
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:300;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+}
 
-        /* HUD Panel */
-        #info-panel {
-            position: absolute; top: 40px; right: 40px; width: 320px;
-            padding: 25px; background: rgba(0, 0, 0, 0.7);
-            border-top: 1px solid #52beb7; color: white; display: none;
-            backdrop-filter: blur(10px); pointer-events: none;
-        }
-        #info-panel .label { font-family: 'DotGothic16', sans-serif; font-size: 12px; color: #52beb7; margin-bottom: 5px; }
-        #info-panel h3 { margin: 0 0 15px 0; font-size: 24px; font-weight: bold; }
-        #info-panel p { margin: 0; font-size: 14px; line-height: 1.6; color: #ccc; }
+/* Grid horizon lines */
+body::after{
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:1;
+    background:
+        linear-gradient(90deg,var(--grid) 1px,transparent 1px),
+        linear-gradient(0deg,var(--grid) 1px,transparent 1px);
+    background-size:60px 60px;
+    mask-image:radial-gradient(ellipse 80% 60% at 50% 100%,black 0%,transparent 100%);
+}
 
-        #hint { position: absolute; bottom: 30px; width: 100%; text-align: center; color: #444; font-size: 11px; letter-spacing: 2px; }
-    </style>
+#ui-help{
+    position:absolute;top:20px;left:20px;color:var(--cyan);
+    background:rgba(0,0,0,0.72);padding:13px 16px;
+    border:1px solid rgba(0,229,255,0.22);
+    border-left:2px solid var(--cyan);
+    font-family:'Share Tech Mono',monospace;
+    font-size:9px;pointer-events:none;z-index:100;
+    letter-spacing:0.14em;line-height:2.1;
+    opacity:0;transition:opacity 1.5s;
+    text-shadow:0 0 8px var(--cyan);
+}
+
+/* Slider — top right, horizontal */
+#slider-wrap{
+    position:absolute;top:20px;right:20px;
+    display:flex;flex-direction:row;align-items:center;gap:10px;
+    opacity:0;pointer-events:none;z-index:100;
+}
+#slider-wrap label{
+    font-family:'Orbitron',monospace;
+    font-size:8px;letter-spacing:0.22em;color:var(--amber);
+    text-transform:uppercase;user-select:none;white-space:nowrap;
+    text-shadow:0 0 6px var(--amber);
+}
+#sep-slider{
+    -webkit-appearance:none;
+    width:120px;height:2px;
+    background:rgba(0,229,255,0.2);
+    border-radius:0px;outline:none;cursor:pointer;
+}
+#sep-slider::-webkit-slider-thumb{
+    -webkit-appearance:none;width:10px;height:10px;
+    border-radius:0;background:var(--cyan);border:none;
+    box-shadow:0 0 8px var(--cyan);
+}
+
+#hover-label{
+    position:fixed;pointer-events:none;
+    font-family:'Orbitron',monospace;
+    font-size:9px;letter-spacing:0.22em;text-transform:uppercase;
+    opacity:0;transition:opacity 0.1s;
+    z-index:200;white-space:nowrap;
+    text-shadow:0 0 8px currentColor;
+}
+
+/* Info panel — shown below slider when exploded and clicked */
+#info-panel{
+    position:absolute;top:60px;right:20px;width:265px;color:#c8e8ff;
+    border:1px solid rgba(0,229,255,0.22);
+    border-left:2px solid var(--cyan);
+    background:rgba(0,4,12,0.88);
+    padding:18px 20px;font-size:10px;letter-spacing:0.06em;line-height:1.9;
+    z-index:150;opacity:0;pointer-events:none;transition:opacity 0.3s;
+    font-family:'Rajdhani',sans-serif;font-weight:400;
+}
+#info-panel.visible{opacity:1;pointer-events:auto}
+#panel-swatch{width:100%;height:1px;margin-bottom:14px;box-shadow:0 0 6px currentColor}
+#panel-name{
+    font-family:'Orbitron',monospace;
+    font-size:10px;letter-spacing:0.22em;text-transform:uppercase;
+    margin-bottom:8px;padding-bottom:8px;
+    border-bottom:1px solid rgba(0,229,255,0.12);
+    text-shadow:0 0 8px currentColor;
+}
+#panel-desc{opacity:0.80;font-size:11px;line-height:1.85;font-weight:300}
+#panel-close{
+    margin-top:16px;font-family:'Share Tech Mono',monospace;
+    font-size:8px;letter-spacing:0.16em;
+    text-transform:uppercase;color:rgba(0,229,255,0.35);
+    cursor:pointer;transition:color 0.15s;
+}
+#panel-close:hover{color:var(--cyan);text-shadow:0 0 8px var(--cyan)}
+
+/* Flicker animation for slider appearance */
+@keyframes flicker{
+    0%  {opacity:0}
+    15% {opacity:1}
+    25% {opacity:0}
+    40% {opacity:1}
+    50% {opacity:0}
+    65% {opacity:1}
+    100%{opacity:1}
+}
+.flicker{ animation:flicker 0.4s ease forwards; }
+
+/* ─── LOADING SCREEN ─────────────────────────────────────────────── */
+#loading-screen{
+    position:fixed;inset:0;z-index:9999;
+    background:#000;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    transition:opacity 0.8s ease;
+}
+#loading-screen.fade-out{opacity:0;pointer-events:none;}
+
+#loading-grid{
+    position:absolute;inset:0;pointer-events:none;
+    background:
+        linear-gradient(90deg,rgba(0,229,255,0.04) 1px,transparent 1px),
+        linear-gradient(0deg,rgba(0,229,255,0.04) 1px,transparent 1px);
+    background-size:40px 40px;
+}
+
+#loading-corner-tl,#loading-corner-tr,#loading-corner-bl,#loading-corner-br{
+    position:absolute;width:40px;height:40px;
+    border-color:var(--cyan);border-style:solid;
+    opacity:0.4;
+}
+#loading-corner-tl{top:30px;left:30px;border-width:1px 0 0 1px;}
+#loading-corner-tr{top:30px;right:30px;border-width:1px 1px 0 0;}
+#loading-corner-bl{bottom:30px;left:30px;border-width:0 0 1px 1px;}
+#loading-corner-br{bottom:30px;right:30px;border-width:0 1px 1px 0;}
+
+#loading-title{
+    font-family:'Orbitron',monospace;
+    font-size:clamp(18px,3vw,32px);
+    letter-spacing:0.35em;
+    color:var(--cyan);
+    text-shadow:0 0 20px var(--cyan),0 0 40px rgba(0,229,255,0.3);
+    margin-bottom:8px;
+    text-transform:uppercase;
+}
+#loading-subtitle{
+    font-family:'Share Tech Mono',monospace;
+    font-size:9px;letter-spacing:0.25em;
+    color:rgba(0,229,255,0.45);
+    margin-bottom:50px;
+    text-transform:uppercase;
+}
+
+#loading-bar-wrap{
+    width:min(420px,70vw);
+    position:relative;
+}
+#loading-bar-label{
+    font-family:'Share Tech Mono',monospace;
+    font-size:8px;letter-spacing:0.2em;
+    color:var(--amber);
+    text-shadow:0 0 6px var(--amber);
+    margin-bottom:8px;
+    display:flex;justify-content:space-between;
+}
+#loading-bar-track{
+    width:100%;height:2px;
+    background:rgba(0,229,255,0.1);
+    border:1px solid rgba(0,229,255,0.15);
+    position:relative;overflow:hidden;
+}
+#loading-bar-fill{
+    height:100%;width:0%;
+    background:var(--cyan);
+    box-shadow:0 0 10px var(--cyan),0 0 20px rgba(0,229,255,0.5);
+    transition:width 0.15s ease;
+    position:relative;
+}
+#loading-bar-fill::after{
+    content:'';position:absolute;right:0;top:0;
+    width:20px;height:100%;
+    background:linear-gradient(90deg,transparent,white);
+    opacity:0.7;
+}
+#loading-pct{
+    font-family:'Share Tech Mono',monospace;
+    font-size:8px;color:rgba(0,229,255,0.6);
+}
+
+#loading-status{
+    font-family:'Share Tech Mono',monospace;
+    font-size:8px;letter-spacing:0.18em;
+    color:rgba(0,229,255,0.45);
+    margin-top:14px;
+    min-height:14px;
+    text-transform:uppercase;
+}
+#loading-status.system-ready{
+    color:var(--amber);
+    text-shadow:0 0 8px var(--amber);
+    letter-spacing:0.4em;
+    font-size:11px;
+}
+
+#loading-scan{
+    position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to bottom,transparent 0%,rgba(0,229,255,0.03) 50%,transparent 100%);
+    animation:scanMove 3s linear infinite;
+    height:40%;
+}
+@keyframes scanMove{
+    0%{transform:translateY(-100%);}
+    100%{transform:translateY(350%);}
+}
+
+/* ─── SPACESHIP EASTER EGG ──────────────────────────────────────── */
+#spaceship-layer{
+    position:fixed;inset:0;
+    pointer-events:none;
+    z-index:250; /* above canvas, below scanline (300) */
+}
+
+.spaceship-el{
+    position:absolute;
+    pointer-events:auto;
+    cursor:crosshair;
+    /* Anchor at top-center so vertical scale changes don't shift the ship up/down */
+    transform:translateX(-50%);
+    transform-origin:top center;
+    user-select:none;
+}
+.spaceship-img{
+    width:52px;
+    height:auto;
+    display:block;
+    filter:drop-shadow(0 0 6px rgba(255,100,0,0.7));
+    image-rendering:pixelated;
+}
+.spaceship-hpbar{
+    position:absolute;
+    top:-12px;left:50%;
+    transform:translateX(-50%);
+    width:36px;height:3px;
+    background:rgba(0,0,0,0.6);
+    border:1px solid rgba(255,180,0,0.4);
+}
+.spaceship-hpfill{
+    height:100%;
+    background:var(--amber);
+    box-shadow:0 0 4px var(--amber);
+    transition:width 0.15s;
+}
+.spaceship-label{
+    position:absolute;
+    top:-24px;left:50%;
+    transform:translateX(-50%);
+    font-family:'Share Tech Mono',monospace;
+    font-size:7px;letter-spacing:0.1em;
+    color:rgba(255,180,0,0.7);
+    white-space:nowrap;
+    pointer-events:none;
+}
+
+/* ─── KILL COUNTER ──────────────────────────────────────────────── */
+#kill-counter{
+    position:fixed;
+    bottom:24px;right:24px;
+    z-index:200;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 0.8s ease;
+    font-family:'Share Tech Mono',monospace;
+    letter-spacing:0.15em;
+    text-align:right;
+}
+#kill-counter.visible{ opacity:1; }
+
+#kill-counter-label{
+    font-size:7px;
+    color:var(--amber);
+    text-shadow:0 0 6px var(--amber);
+    text-transform:uppercase;
+    margin-bottom:4px;
+}
+#kill-counter-value{
+    font-family:'Orbitron',monospace;
+    font-size:36px;
+    font-weight:700;
+    color:var(--cyan);
+    text-shadow:0 0 14px var(--cyan), 0 0 30px rgba(0,229,255,0.35);
+    line-height:1;
+}
+#kill-counter-bar{
+    margin-top:6px;
+    width:100%;
+    height:1px;
+    background:rgba(0,229,255,0.15);
+    position:relative;
+}
+#kill-counter-bar::after{
+    content:'';
+    position:absolute;
+    right:0;top:0;
+    width:0%;height:100%;
+    background:var(--cyan);
+    box-shadow:0 0 8px var(--cyan);
+    transition:width 0.6s cubic-bezier(0.23,1,0.32,1);
+}
+#kill-counter-bar.pulse::after{
+    width:100%;
+}
+#kill-counter-sub{
+    font-size:7px;
+    color:rgba(0,229,255,0.35);
+    margin-top:5px;
+    text-transform:uppercase;
+    letter-spacing:0.2em;
+}
+@keyframes killFlash{
+    0%  { color:var(--amber); text-shadow:0 0 20px var(--amber),0 0 40px var(--amber); }
+    60% { color:var(--cyan);  text-shadow:0 0 14px var(--cyan),0 0 30px rgba(0,229,255,0.35); }
+    100%{ color:var(--cyan);  text-shadow:0 0 14px var(--cyan),0 0 30px rgba(0,229,255,0.35); }
+}
+.kill-flash{ animation:killFlash 0.5s ease forwards; }
+</style>
 </head>
 <body>
-    <div id="header">
-        <h1>Open Circuit</h1>
-        <p>260-270 12th Ave, NYC<br>140386880</p>
+
+<!-- ─── LOADING SCREEN ──────────────────────────────────────────────── -->
+<div id="loading-screen">
+    <div id="loading-grid"></div>
+    <div id="loading-scan"></div>
+    <div id="loading-corner-tl"></div>
+    <div id="loading-corner-tr"></div>
+    <div id="loading-corner-bl"></div>
+    <div id="loading-corner-br"></div>
+
+    <div id="loading-title">OPEN. CIRCUIT.</div>
+    <div id="loading-subtitle">ARCHITECTURAL SYSTEM v2.4 — INITIALIZING</div>
+
+    <div id="loading-bar-wrap">
+        <div id="loading-bar-label">
+            <span>GEOMETRY STREAM</span>
+            <span id="loading-pct">0%</span>
+        </div>
+        <div id="loading-bar-track">
+            <div id="loading-bar-fill"></div>
+        </div>
     </div>
+    <div id="loading-status">AWAITING DATA PACKETS...</div>
+</div>
 
-    <div id="info-panel">
-        <div class="label" id="tag">SYSTEM</div>
-        <h3 id="program-title">TITLE</h3>
-        <p id="program-desc">DESCRIPTION</p>
-    </div>
+<!-- ─── MAIN UI ─────────────────────────────────────────────────────── -->
+<div id="ui-help">
+    [ SPACE ] — DETONATE STRUCTURAL CLOUD<br>
+    [ CLICK ] — SELECT PROGRAM<br>
+    [ ESC &nbsp;] — DESELECT<br>
+    [ X &nbsp;&nbsp;&nbsp;] — SPAWN HOSTILE<br>
+    [ SCROLL ] — ZOOM &nbsp;|&nbsp; [ MOUSE ] — ORBIT
+</div>
 
-    <div id="hint">MOUSE1: ROTATE // HOVER: DATASTREAM ACCESS</div>
+<div id="slider-wrap">
+    <label>SEPARATE</label>
+    <input type="range" id="sep-slider" min="0" max="1" step="0.01" value="0">
+    <label>LEVELS</label>
+</div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+<div id="hover-label"></div>
+<div id="info-panel">
+    <div id="panel-swatch"></div>
+    <div id="panel-name"></div>
+    <div id="panel-desc"></div>
+    <div id="panel-close">[ ESC / CLICK TO CLOSE ]</div>
+</div>
+
+<!-- ─── SPACESHIP LAYER ─────────────────────────────────────────────── -->
+<div id="spaceship-layer"></div>
+
+<!-- ─── KILL COUNTER ────────────────────────────────────────────────── -->
+<div id="kill-counter">
+    <div id="kill-counter-label">HOSTILES NEUTRALIZED</div>
+    <div id="kill-counter-value">000</div>
+    <div id="kill-counter-bar"></div>
+    <div id="kill-counter-sub">CONFIRMED KILLS</div>
+</div>
+
+<script type="importmap">
+{
+    "imports": {
+        "three":                                         "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/examples/jsm/loaders/GLTFLoader.js":     "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js",
+        "three/examples/jsm/controls/OrbitControls.js": "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js"
+    }
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader }    from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+// ─── Renderer ─────────────────────────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.5, 80000);
+
+// Camera must be in scene so children (starfield) render correctly
+scene.add(camera);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.enabled       = false;
+controls.minDistance   = 30;
+controls.maxDistance   = 2000;
+
+// ─── Lighting ─────────────────────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0xffffff, 3.0));
+const sun = new THREE.DirectionalLight(0xffffff, 2.5);
+sun.position.set(60,120,40); scene.add(sun);
+const back = new THREE.DirectionalLight(0xffffff, 0.8);
+back.position.set(-60,40,-80); scene.add(back);
+
+const starContainer = new THREE.Object3D();
+scene.add(starContainer); // Scene-level, not camera child — reacts to orbit/pan
+
+(function buildStarfield(){
+    // ── Nebula texture — high-res canvas, seam-safe, soft blending ──
+    const W=4096, H=2048;
+    const nebulaCanvas=document.createElement('canvas');
+    nebulaCanvas.width=W; nebulaCanvas.height=H;
+    const ctx=nebulaCanvas.getContext('2d');
+
+    ctx.fillStyle='#000000';
+    ctx.fillRect(0,0,W,H);
+
+    // addCluster: draw a soft elliptical glow, tiling at the horizontal seam
+    const addCluster=(x,y,rx,ry,r,g,b,alpha)=>{
+        // Draw at x and also at x±W to seamlessly tile the horizontal edge
+        const offsets=[0, W, -W];
+        offsets.forEach(dx=>{
+            const cx=x+dx;
+            // Skip if completely outside canvas (minor optimisation)
+            if(cx+rx<0||cx-rx>W) return;
+            ctx.save();
+            ctx.translate(cx,y);
+            ctx.scale(1, ry/rx);
+            const grad=ctx.createRadialGradient(0,0,0, 0,0,rx);
+            grad.addColorStop(0,   `rgba(${r},${g},${b},${alpha.toFixed(4)})`);
+            grad.addColorStop(0.35,`rgba(${r},${g},${b},${(alpha*0.35).toFixed(4)})`);
+            grad.addColorStop(0.7, `rgba(${r},${g},${b},${(alpha*0.08).toFixed(4)})`);
+            grad.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+            ctx.fillStyle=grad;
+            ctx.beginPath();ctx.arc(0,0,rx,0,Math.PI*2);ctx.fill();
+            ctx.restore();
+        });
+    };
+
+    // Main galactic band — wide flat ellipses at canvas equator (y≈H/2)
+    for(let i=0;i<16;i++){
+        const x=Math.random()*W;
+        const y=(H/2-80)+Math.random()*160;
+        const rx=160+Math.random()*340, ry=50+Math.random()*130;
+        addCluster(x,y,rx,ry, 155,180,235, 0.020+Math.random()*0.022);
+    }
+    for(let i=0;i<10;i++){
+        const x=Math.random()*W;
+        const y=(H/2-120)+Math.random()*240;
+        const rx=100+Math.random()*220, ry=30+Math.random()*80;
+        addCluster(x,y,rx,ry, 195,165,235, 0.012+Math.random()*0.016);
+    }
+    // Faint scattered nebulae — very low alpha, spread all over
+    const nebRGB=[[0,90,210],[150,45,190],[210,85,25],[35,160,140]];
+    for(let i=0;i<16;i++){
+        const x=Math.random()*W, y=Math.random()*H;
+        const rx=60+Math.random()*180, ry=rx*(0.35+Math.random()*0.55);
+        const [nr,ng,nb]=nebRGB[Math.floor(Math.random()*nebRGB.length)];
+        addCluster(x,y,rx,ry,nr,ng,nb, 0.007+Math.random()*0.012);
+    }
+
+    const nebTex=new THREE.CanvasTexture(nebulaCanvas);
+    nebTex.magFilter=THREE.LinearFilter;
+    nebTex.minFilter=THREE.LinearMipmapLinearFilter;
+    nebTex.generateMipmaps=true;
+    nebTex.anisotropy=4;
+
+    // Nebula sphere at 5400, stars at 5800 — stars always render in front
+    const nebGeo=new THREE.SphereGeometry(5400,64,32);
+    const nebMat=new THREE.MeshBasicMaterial({map:nebTex,side:THREE.BackSide,depthWrite:false,depthTest:false});
+    starContainer.add(new THREE.Mesh(nebGeo,nebMat));
+
+    // ── Stars at r=5800 — outside nebula sphere ──
+    const N=28000;
+    const pos=new Float32Array(N*3);
+    const sz =new Float32Array(N);
+    const col=new Float32Array(N*3);
+
+    for(let i=0;i<N;i++){
+        const theta=Math.random()*Math.PI*2;
+        let phi;
+        if(i<N*0.30) phi=Math.PI*0.5+(Math.random()-0.5)*0.65;
+        else         phi=Math.acos(2*Math.random()-1);
+        const r=5800;
+        pos[i*3]  =r*Math.sin(phi)*Math.cos(theta);
+        pos[i*3+1]=r*Math.cos(phi);
+        pos[i*3+2]=r*Math.sin(phi)*Math.sin(theta);
+
+        const rand=Math.random();
+        sz[i]=rand<0.72 ? 0.8+Math.random()*1.0
+             :rand<0.93 ? 2.0+Math.random()*2.5
+             :            4.5+Math.random()*5.0;
+
+        const t=Math.random();
+        if     (t<0.58){col[i*3]=1.0;col[i*3+1]=1.0; col[i*3+2]=1.0;}
+        else if(t<0.73){col[i*3]=0.7;col[i*3+1]=0.85;col[i*3+2]=1.0;}
+        else if(t<0.88){col[i*3]=1.0;col[i*3+1]=0.92;col[i*3+2]=0.65;}
+        else           {col[i*3]=0.9;col[i*3+1]=0.7; col[i*3+2]=1.0;}
+    }
+
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    geo.setAttribute('aSize',   new THREE.BufferAttribute(sz,1));
+    geo.setAttribute('aColor',  new THREE.BufferAttribute(col,3));
+
+    const mat=new THREE.ShaderMaterial({
+        vertexShader:`
+            attribute float aSize;
+            attribute vec3  aColor;
+            varying   vec3  vCol;
+            varying   float vB;
+            void main(){
+                vCol=aColor; vB=aSize;
+                vec4 mv=modelViewMatrix*vec4(position,1.0);
+                float ps=aSize*(900.0/-mv.z);
+                gl_PointSize=clamp(ps,0.6,12.0);
+                gl_Position=projectionMatrix*mv;
             }
+        `,
+        fragmentShader:`
+            varying vec3  vCol;
+            varying float vB;
+            void main(){
+                vec2  uv  =gl_PointCoord-0.5;
+                float d   =length(uv)*2.0;
+                float core=1.0-smoothstep(0.0,0.28,d);
+                float glow=(1.0-smoothstep(0.28,1.0,d))*clamp(vB*0.15,0.0,0.7);
+                float a   =core+glow;
+                if(a<0.01) discard;
+                vec3 fc=mix(vCol,vec3(1.0),core*clamp(vB*0.18,0.0,0.85));
+                gl_FragColor=vec4(fc,clamp(a,0.0,1.0));
+            }
+        `,
+        transparent:true,depthWrite:false,depthTest:false,
+    });
+    starContainer.add(new THREE.Points(geo,mat));
+})();
+
+// ─── Program data ─────────────────────────────────────────────────────────────
+const PROGRAMS = {
+    cores:      {label:'CORES',              hoverText:'Cores',             fallbackColor:0xb0bec5,
+                 desc:'Vertical circulation and building services. They connect the ground, elevated volumes, and public circulation.'},
+    admin:      {label:'ADMINISTRATION',     hoverText:'Administration',    fallbackColor:0x1e88e5,
+                 desc:'Offices and support spaces for museum staff and curatorial work. Integrated into the building rather than isolated from the public areas.'},
+    education:  {label:'EDUCATIONAL SPACES', hoverText:'Educational Spaces',fallbackColor:0xfdd835,
+                 desc:'Rooms for workshops, lectures, and media production. Learning and making happen directly within the museum environment.'},
+    exhibition: {label:'EXHIBITION SPACES',  hoverText:'Exhibition Spaces', fallbackColor:0xe53935,
+                 desc:'Distributed galleries for media installations, projections, and interactive work. Multiple exhibitions can run simultaneously and overlap rather than being organized in one central hall.'},
+    flex:       {label:'FLEXIBLE VR SPACE',  hoverText:'Flexible VR Space', fallbackColor:0x9c27b0,
+                 desc:'A reconfigurable black-box space for VR, gaming, immersive film, and live digital media. The space can shift between exhibition, performance, and experimentation.'},
+    market:     {label:'MARKET',             hoverText:'Market',            fallbackColor:0xef6c00,
+                 desc:'A flexible public market space for local vendors, food stalls, books, and media-related goods. It brings everyday activity into the museum and strengthens the connection between the building and the street.'},
+    restaurant: {label:'RESTAURANT',         hoverText:'Restaurant',        fallbackColor:0xe91e63,
+                 desc:'A public social space open to visitors and the city. It acts as an informal gathering place connected to the museum.'},
+};
+
+// Alternating Y-level: 0,+1,-1,+2,-2,+3,-3
+const PROG_KEYS = Object.keys(PROGRAMS);
+const Y_LEVELS  = {};
+PROG_KEYS.forEach((k,i)=>{
+    if(i===0){Y_LEVELS[k]=0;return;}
+    const h=Math.ceil(i/2);
+    Y_LEVELS[k]=i%2===1?h:-h;
+});
+const STACK_SPACING=18;
+
+// ─── Resin shader ─────────────────────────────────────────────────────────────
+const resinVert=`
+    uniform float uYOffset;
+    varying vec3 vNormal;
+    varying vec3 vViewDir;
+    void main(){
+        vec4 wp=modelMatrix*vec4(position,1.0);
+        wp.y+=uYOffset;
+        vNormal =normalize(mat3(modelMatrix)*normal);
+        vViewDir=normalize(cameraPosition-wp.xyz);
+        gl_Position=projectionMatrix*viewMatrix*wp;
+    }
+`;
+const resinFrag=`
+    uniform vec3  uColor;
+    uniform float uOpacity;
+    uniform float uEmissive;
+    varying vec3  vNormal;
+    varying vec3  vViewDir;
+    void main(){
+        vec3 n=normalize(vNormal);vec3 v=normalize(vViewDir);
+        float NdV=max(dot(n,v),0.0);
+        float fr=pow(1.0-NdV,3.2);
+        vec3 body=mix(uColor*(0.65+uEmissive),vec3(0.96,0.98,1.0),0.28*(1.0-fr));
+        vec3 rim =uColor*(1.6+uEmissive*0.5);
+        vec3 col =mix(body,rim,fr*0.80);
+        col=mix(col,vec3(1.0),pow(fr,1.6)*0.50);
+        float alpha=clamp(uOpacity*(0.42+fr*0.58),0.0,1.0);
+        gl_FragColor=vec4(col,alpha);
+    }
+`;
+
+// ─── Registry ─────────────────────────────────────────────────────────────────
+const registry   ={};
+let   selectedKey=null;
+let   sceneCenter=new THREE.Vector3();
+const programGroup=new THREE.Group();
+scene.add(programGroup);
+
+// Invisible hit-proxy group — contains one Box3Helper-sized invisible mesh per program
+// These are NOT children of programGroup so they don't rotate with it.
+// Each frame we project their world position to match the visual geometry.
+const hitProxies={}; // key -> {mesh, baseWorldCenter}
+const hitProxyGroup = new THREE.Group();
+scene.add(hitProxyGroup);
+
+// ─── Cloud shader ─────────────────────────────────────────────────────────────
+const cloudVert=`
+    uniform float uExplode;
+    uniform float uTime;
+    attribute vec3  centerDir;
+    attribute float randomSpeed;
+    void main(){
+        vec3 dd=vec3(centerDir.x,centerDir.y*0.1,centerDir.z);
+        vec3 p=position+dd*uExplode*85.0;
+        // Reduced spin: 0.22 -> 0.08, so much less rotation
+        float ang=uTime*randomSpeed*uExplode*0.14;
+        float s=sin(ang),c=cos(ang);
+        vec3 f=p;f.x=p.x*c-p.z*s;f.z=p.x*s+p.z*c;
+        gl_Position=projectionMatrix*modelViewMatrix*vec4(f,1.0);
+    }
+`;
+let cloudMesh, cloudMaterial;
+
+function setupShatterCloud(node){
+    const geo=node.geometry.toNonIndexed();
+    const cnt=geo.attributes.position.count;
+    const dirs=new Float32Array(cnt*3),spds=new Float32Array(cnt);
+    node.updateWorldMatrix(true,false);
+    const pos=geo.attributes.position;
+    for(let i=0;i<cnt;i+=3){
+        const vA=new THREE.Vector3(pos.getX(i),  pos.getY(i),  pos.getZ(i))  .applyMatrix4(node.matrixWorld);
+        const vB=new THREE.Vector3(pos.getX(i+1),pos.getY(i+1),pos.getZ(i+1)).applyMatrix4(node.matrixWorld);
+        const vC=new THREE.Vector3(pos.getX(i+2),pos.getY(i+2),pos.getZ(i+2)).applyMatrix4(node.matrixWorld);
+        const dir=new THREE.Vector3().add(vA).add(vB).add(vC).divideScalar(3).normalize();
+        const spd=0.3+Math.random()*0.5;
+        for(let j=0;j<3;j++){
+            dirs[(i+j)*3]=dir.x;dirs[(i+j)*3+1]=dir.y;dirs[(i+j)*3+2]=dir.z;spds[i+j]=spd;
         }
-    </script>
+    }
+    geo.applyMatrix4(node.matrixWorld);
+    geo.setAttribute('centerDir',  new THREE.BufferAttribute(dirs,3));
+    geo.setAttribute('randomSpeed',new THREE.BufferAttribute(spds,1));
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    cloudMaterial=new THREE.ShaderMaterial({
+        uniforms:{uExplode:{value:0},uTime:{value:0}},
+        vertexShader:cloudVert,
+        // Always visible white — explosion is just the geometry flying apart
+        fragmentShader:`void main(){ gl_FragColor=vec4(1.0,1.0,1.0,1.0); }`,
+        side:THREE.DoubleSide,
+    });
+    cloudMesh=new THREE.Mesh(geo,cloudMaterial);
+    programGroup.add(cloudMesh);
+}
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x12151a); // Dark UI Blue-Black
+// ─── Travel lines — built AFTER geometry loads, ONLY shown when exploded ───────
+const travelLines=new THREE.Group();
+travelLines.visible=false;
+programGroup.add(travelLines);
 
-        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 100000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+function buildTravelLines(){
+    travelLines.clear();
+    Object.entries(registry).forEach(([key,entry])=>{
+        const level=Y_LEVELS[key]??0;
+        if(level===0) return;
 
-        // Lights
-        scene.add(new THREE.AmbientLight(0xffffff, 1.0));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-        sun.position.set(2000, 4000, 2000);
-        scene.add(sun);
+        // Compute bounding box centroid in programGroup LOCAL space
+        const box=new THREE.Box3();
+        entry.meshes.forEach(({mesh})=>box.expandByObject(mesh));
+        const center=new THREE.Vector3();
+        box.getCenter(center); // this is in world space since meshes are in programGroup
 
-        // Mapped Program Data
-        const content = [
-            { 
-                title: "Media Museum Spaces", 
-                tag: "Exhibition Vol.", 
-                desc: "Fluid, multi-sensory environments hosting a variety of media experiences representing the relentless cultural motion of New York.", 
-                color: 0xff7700, // Vibrant Orange
-                opacity: 0.6
-            },
-            { 
-                title: "The Framework", 
-                tag: "System Lattice", 
-                desc: "A stable structural network of nodes and pieces forming a stable but ever-growing and changing foundation for the digital museum.", 
-                color: 0xffffff, // White
-                opacity: 1.0
-            }
+        // Convert world center back to programGroup local space
+        const localCenter=center.clone();
+        programGroup.worldToLocal(localCenter);
+
+        // Line starts and ends at same point (zero length = invisible at slider=0)
+        const pts=[
+            new THREE.Vector3(localCenter.x, localCenter.y, localCenter.z),
+            new THREE.Vector3(localCenter.x, localCenter.y, localCenter.z),
         ];
+        const geo=new THREE.BufferGeometry().setFromPoints(pts);
+        const lineColor = entry.color ? entry.color.clone() : new THREE.Color(0x00e5ff);
+        const mat=new THREE.LineDashedMaterial({
+            color:lineColor,
+            transparent:true,
+            opacity:0.0,
+            dashSize:1.5,
+            gapSize:1.0
+        });
+        const line=new THREE.Line(geo,mat);
+        line.computeLineDistances();
+        line.userData.programKey=key;
+        line.userData.baseOpacity=0.55;
+        line.userData.localCenter=localCenter.clone();
+        line.userData.currentOff=0;
+        travelLines.add(line);
+    });
+}
 
-        const loader = new OBJLoader();
-        let volumes = [];
+// ─── Loading screen logic ──────────────────────────────────────────────────────
+const loadingScreen  = document.getElementById('loading-screen');
+const loadingBarFill = document.getElementById('loading-bar-fill');
+const loadingPct     = document.getElementById('loading-pct');
+const loadingStatus  = document.getElementById('loading-status');
 
-        loader.load('Massing_8_c.obj', (obj) => {
-            const box = new THREE.Box3().setFromObject(obj);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-            obj.position.set(-center.x, -center.y, -center.z);
+const STATUS_MSGS = [
+    'PARSING MESH TOPOLOGY...',
+    'LOADING SHADER PROGRAMS...',
+    'COMPILING GEOMETRY BUFFERS...',
+    'STREAMING PROGRAM DATA...',
+    'CALIBRATING RESIN MATRICES...',
+    'INITIALIZING CLOUD SYSTEM...',
+    'BUILDING SPATIAL REGISTRY...',
+    'LINKING ORBIT CONTROLS...',
+];
+let statusIdx = 0;
+const statusInterval = setInterval(()=>{
+    statusIdx = (statusIdx+1) % STATUS_MSGS.length;
+    loadingStatus.textContent = STATUS_MSGS[statusIdx];
+}, 1100);
 
-            let i = 0;
-            obj.traverse((child) => {
-                if (child.isMesh) {
-                    const data = content[i] || { color: 0x333333, opacity: 0.5 };
-                    child.userData = data; 
-                    child.material = new THREE.MeshStandardMaterial({ 
-                        color: data.color,
-                        transparent: data.opacity < 1.0,
-                        opacity: data.opacity,
-                        depthWrite: data.opacity >= 1.0, // Fixes the "dark flickering" transparency issue
-                        roughness: 0.3,
-                        metalness: 0.1
-                    });
-                    volumes.push(child);
-                    i++;
+function updateLoadingProgress(pct){
+    const p = Math.min(100, Math.round(pct));
+    loadingBarFill.style.width = p+'%';
+    loadingPct.textContent = p+'%';
+}
+
+function dismissLoadingScreen(){
+    clearInterval(statusInterval);
+    loadingStatus.classList.add('system-ready');
+    loadingStatus.textContent = '— SYSTEM READY —';
+    updateLoadingProgress(100);
+    setTimeout(()=>{
+        loadingScreen.classList.add('fade-out');
+        setTimeout(()=>{ loadingScreen.style.display='none'; }, 850);
+    }, 900);
+}
+
+// ─── Load GLBs ────────────────────────────────────────────────────────────────
+const loader     =new GLTFLoader();
+const PROG_FILES =['admin.glb','cores.glb','education.glb','exhibition.glb','flex.glb','market.glb','restaurant.glb'];
+const ALL_FILES  =['cloud.glb',...PROG_FILES];
+let   loadedCount=0;
+
+// Track per-file progress for loading bar
+const fileProgress = {};
+ALL_FILES.forEach(f=>fileProgress[f]=0);
+
+function calcTotalProgress(){
+    const vals = Object.values(fileProgress);
+    return vals.reduce((a,b)=>a+b,0) / vals.length;
+}
+
+ALL_FILES.forEach(file=>{
+    loader.load('./'+file, gltf=>{
+        fileProgress[file] = 100;
+        updateLoadingProgress(calcTotalProgress());
+
+        if(file==='cloud.glb'){
+            gltf.scene.traverse(n=>{if(n.isMesh)setupShatterCloud(n);});
+            gltf.scene=null;onLoaded();return;
+        }
+        const key=file.replace('.glb','');
+        const prog=PROGRAMS[key];
+        if(!prog){gltf.scene=null;onLoaded();return;}
+
+        registry[key]={meshes:[],materials:[],color:null};
+        gltf.scene.updateWorldMatrix(true,true);
+        const nodes=[];
+        gltf.scene.traverse(n=>{if(n.isMesh)nodes.push(n);});
+
+        nodes.forEach(n=>{
+            let glbColor=new THREE.Color(prog.fallbackColor);
+            if(n.material?.color){
+                const c=n.material.color;
+                const lum=c.r*0.299+c.g*0.587+c.b*0.114;
+                if(lum>0.04&&lum<0.97)glbColor.copy(c);
+            }
+            if(!registry[key].color)registry[key].color=glbColor.clone();
+
+            const mat=new THREE.ShaderMaterial({
+                uniforms:{
+                    uColor:   {value:glbColor.clone()},
+                    uOpacity: {value:0.82},
+                    uEmissive:{value:0.28},
+                    uYOffset: {value:0.0},
+                },
+                vertexShader:resinVert,fragmentShader:resinFrag,
+                transparent:true,depthWrite:false,side:THREE.DoubleSide,
+            });
+            n.updateWorldMatrix(true,false);
+            const wm=n.matrixWorld.clone();
+            n.removeFromParent();
+            n.matrix.copy(wm);
+            n.matrix.decompose(n.position,n.quaternion,n.scale);
+            n.matrixAutoUpdate=true;
+            n.material=mat;
+            n.userData.programKey=key;
+            programGroup.add(n);
+            registry[key].meshes.push({mesh:n,baseY:n.position.y});
+            registry[key].materials.push(mat);
+        });
+        gltf.scene=null;onLoaded();
+
+    }, (xhr)=>{
+        // Per-file progress
+        if(xhr.total > 0){
+            fileProgress[file] = (xhr.loaded/xhr.total)*100;
+            updateLoadingProgress(calcTotalProgress());
+        }
+    });
+});
+
+function onLoaded(){
+    loadedCount++;
+    if(loadedCount<ALL_FILES.length)return;
+    const box=new THREE.Box3();
+    Object.values(registry).forEach(e=>e.meshes.forEach(({mesh})=>box.expandByObject(mesh)));
+    sceneCenter=box.isEmpty()?new THREE.Vector3():box.getCenter(new THREE.Vector3());
+    buildTravelLines();
+    buildHitProxies();
+    startIntro();
+    dismissLoadingScreen();
+}
+
+// ─── Intro — place camera immediately at final position, no zoom animation ──────
+function startIntro(){
+    const FINAL_POS=new THREE.Vector3(100,55,100);
+    const TARGET   =sceneCenter.clone();
+
+    camera.position.copy(FINAL_POS.clone().add(TARGET));
+    camera.lookAt(TARGET);
+    controls.target.copy(TARGET);
+    controls.enabled=true;
+
+    document.getElementById('ui-help').style.opacity='1';
+
+    // Compute geometry exclusion radius for ship paths
+    computeGeoExclusion();
+    // Start continuous spawn cycle (first ship at 5s, then every 15-25s)
+    startSpawnCycle();
+}
+
+// ─── Separation ───────────────────────────────────────────────────────────────
+const sliderWrap =document.getElementById('slider-wrap');
+const sliderInput=document.getElementById('sep-slider');
+
+function applySeparation(t){
+    Object.entries(registry).forEach(([key,entry])=>{
+        const target=(Y_LEVELS[key]??0)*STACK_SPACING*t;
+        entry.materials.forEach(mat=>{
+            gsap.to(mat.uniforms.uYOffset,{value:target,duration:0.5,ease:'power2.out'});
+        });
+        const line=travelLines.children.find(l=>l.userData.programKey===key);
+        if(line){
+            const lc=line.userData.localCenter;
+            const proxy={off:line.userData.currentOff??0};
+            gsap.killTweensOf(proxy);
+            gsap.to(proxy,{off:target,duration:0.5,ease:'power2.out',
+                onUpdate(){
+                    line.userData.currentOff=proxy.off;
+                    const pa=line.geometry.attributes.position.array;
+                    // Bottom: always at local centroid (moves with geometry via uYOffset in shader,
+                    // but since line is also in programGroup, centroid.y IS the visual base)
+                    pa[0]=lc.x; pa[1]=lc.y; pa[2]=lc.z;
+                    // Top: centroid + current Y separation offset
+                    pa[3]=lc.x; pa[4]=lc.y+proxy.off; pa[5]=lc.z;
+                    line.geometry.attributes.position.needsUpdate=true;
+                    line.computeLineDistances();
                 }
             });
-
-            scene.add(obj);
-            const dist = Math.max(size.x, size.y, size.z);
-            camera.position.set(dist * 1.4, dist * 0.8, dist * 1.4);
-            controls.target.set(0, 0, 0);
-        });
-
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.5;
-
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        const panel = document.getElementById('info-panel');
-
-        window.addEventListener('mousemove', (e) => {
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        });
-
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            raycaster.setFromCamera(mouse, camera);
-            const hits = raycaster.intersectObjects(volumes);
-
-            if (hits.length > 0) {
-                const info = hits[0].object.userData;
-                panel.style.display = 'block';
-                document.getElementById('program-title').innerText = info.title;
-                document.getElementById('tag').innerText = info.tag;
-                document.getElementById('program-desc').innerText = info.desc;
-                hits[0].object.material.emissive.setHex(0x52beb7);
-                hits[0].object.material.emissiveIntensity = 0.4;
-            } else {
-                panel.style.display = 'none';
-                volumes.forEach(v => v.material.emissiveIntensity = 0);
-            }
-            renderer.render(scene, camera);
+            // Opacity: 0 when slider=0, grows with t
+            gsap.to(line.material,{opacity:t*(line.userData.baseOpacity||0.55),duration:0.3,ease:'power2.out'});
         }
-        animate();
-    </script>
+    });
+}
+
+sliderInput.addEventListener('input',()=>applySeparation(parseFloat(sliderInput.value)));
+
+// ─── syncHitProxies — keeps invisible hit proxies aligned with visual geometry ──
+function syncHitProxies(){
+    const curRotY=programGroup.rotation.y;
+    Object.entries(hitProxies).forEach(([key,proxy])=>{
+        const entry=registry[key];
+        if(!entry)return;
+        const off=entry.materials[0]?.uniforms.uYOffset?.value??0;
+        const bc=proxy.baseWorldCenter; // world center at build time (no offset)
+        const dRot=curRotY-proxy.buildRotY;
+        const cos=Math.cos(dRot), sin=Math.sin(dRot);
+        // Rotate XZ by delta rotation, Y just gets the offset added
+        proxy.mesh.position.set(
+            bc.x*cos - bc.z*sin,
+            bc.y + off,
+            bc.x*sin + bc.z*cos
+        );
+    });
+}
+
+// ─── Panel UI ─────────────────────────────────────────────────────────────────
+const panel      =document.getElementById('info-panel');
+const panelSwatch=document.getElementById('panel-swatch');
+const panelName  =document.getElementById('panel-name');
+const panelDesc  =document.getElementById('panel-desc');
+const hoverLabel =document.getElementById('hover-label');
+
+function selectProgram(key){
+    selectedKey=key;
+    const prog=PROGRAMS[key];
+    const entry=registry[key];
+    Object.entries(registry).forEach(([k,e])=>{
+        const sel=k===key;
+        e.materials.forEach(mat=>{
+            gsap.to(mat.uniforms.uOpacity, {value:sel?0.92:0.35,duration:0.4,ease:'power2.inOut'});
+            gsap.to(mat.uniforms.uEmissive,{value:sel?0.50:0.05,duration:0.4,ease:'power2.inOut'});
+        });
+    });
+    const col='#'+(entry?.color??new THREE.Color(1,1,1)).getHexString();
+    panelSwatch.style.background=col;
+    panelName.textContent=prog.label;
+    panelName.style.color=col;
+    panelDesc.textContent=prog.desc;
+    panel.classList.add('visible');
+}
+
+function deselect(){
+    selectedKey=null;
+    Object.values(registry).forEach(e=>{
+        e.materials.forEach(mat=>{
+            gsap.to(mat.uniforms.uOpacity, {value:0.82,duration:0.4,ease:'power2.inOut'});
+            gsap.to(mat.uniforms.uEmissive,{value:0.28,duration:0.4,ease:'power2.inOut'});
+        });
+    });
+    panel.classList.remove('visible');
+}
+document.getElementById('panel-close').addEventListener('click',deselect);
+
+// ─── Raycaster ────────────────────────────────────────────────────────────────
+const raycaster=new THREE.Raycaster();
+const pointer  =new THREE.Vector2();
+let isDragging =false;
+let dragOrigin ={x:0,y:0};
+
+function buildHitProxies(){
+    hitProxyGroup.clear();
+    Object.keys(hitProxies).forEach(k=>delete hitProxies[k]);
+    programGroup.updateMatrixWorld(true);
+    Object.entries(registry).forEach(([key,entry])=>{
+        const box=new THREE.Box3();
+        entry.meshes.forEach(({mesh})=>box.expandByObject(mesh));
+        const size=new THREE.Vector3(); box.getSize(size);
+        const center=new THREE.Vector3(); box.getCenter(center);
+
+        // Moderate padding: close to geometry size but still forgiving on thin pieces
+        const padX=Math.max(size.x*1.25, size.x+4);
+        const padY=Math.max(size.y*1.25, size.y+4);
+        const padZ=Math.max(size.z*1.25, size.z+4);
+
+        const geo=new THREE.BoxGeometry(padX, padY, padZ);
+        const mat=new THREE.MeshBasicMaterial({visible:false, side:THREE.DoubleSide});
+        const mesh=new THREE.Mesh(geo,mat);
+        mesh.position.copy(center);
+        mesh.userData.programKey=key;
+        hitProxyGroup.add(mesh);
+
+        hitProxies[key]={
+            mesh,
+            baseWorldCenter: center.clone(),
+            buildRotY: programGroup.rotation.y,
+        };
+    });
+}
+
+function allProgMeshes(){
+    return Object.values(hitProxies).map(p=>p.mesh);
+}
+
+renderer.domElement.addEventListener('pointerdown',e=>{
+    isDragging=false;dragOrigin={x:e.clientX,y:e.clientY};
+});
+
+renderer.domElement.addEventListener('pointermove',e=>{
+    if(Math.abs(e.clientX-dragOrigin.x)>4||Math.abs(e.clientY-dragOrigin.y)>4)isDragging=true;
+
+    pointer.x= (e.clientX/innerWidth)*2-1;
+    pointer.y=-(e.clientY/innerHeight)*2+1;
+    raycaster.setFromCamera(pointer,camera);
+
+    const hits=raycaster.intersectObjects(allProgMeshes(),false);
+    if(hits.length){
+        const key =hits[0].object.userData.programKey;
+        const prog=PROGRAMS[key];
+        const col =registry[key]?.color;
+        hoverLabel.textContent  =prog?.hoverText??key;
+        hoverLabel.style.color  =col?'#'+col.getHexString():'#fff';
+        hoverLabel.style.opacity='1';
+        hoverLabel.style.left=(e.clientX+14)+'px';
+        hoverLabel.style.top =(e.clientY-6) +'px';
+    } else {
+        hoverLabel.style.opacity='0';
+    }
+});
+
+renderer.domElement.addEventListener('pointerup',e=>{
+    if(isDragging)return;
+    pointer.x= (e.clientX/innerWidth)*2-1;
+    pointer.y=-(e.clientY/innerHeight)*2+1;
+    raycaster.setFromCamera(pointer,camera);
+    const hits=raycaster.intersectObjects(allProgMeshes(),false);
+    if(hits.length){
+        const key=hits[0].object.userData.programKey;
+        key===selectedKey?deselect():selectProgram(key);
+    } else {
+        deselect();
+    }
+});
+
+// ─── Keyboard ─────────────────────────────────────────────────────────────────
+let isExploded=false;
+// Guard: prevent rapid double-fire that causes glitch
+let explodeAnimating=false;
+
+window.addEventListener('keydown',e=>{
+    if(e.code==='Space'&&cloudMaterial&&!explodeAnimating){
+        e.preventDefault();
+        isExploded=!isExploded;
+        explodeAnimating=true;
+
+        // Kill any existing tween on uExplode first to prevent conflicts
+        gsap.killTweensOf(cloudMaterial.uniforms.uExplode);
+
+        gsap.to(cloudMaterial.uniforms.uExplode,{
+            value:   isExploded?1.0:0.0,
+            duration:isExploded?0.9:1.8,
+            ease:    isExploded?'power4.out':'power3.inOut',
+            onComplete(){ explodeAnimating=false; }
+        });
+
+        if(isExploded){
+            // Flicker animation
+            sliderWrap.style.opacity='0';
+            sliderWrap.style.pointerEvents='auto';
+            sliderWrap.classList.remove('flicker');
+            void sliderWrap.offsetWidth; // force reflow
+            sliderWrap.classList.add('flicker');
+            travelLines.visible=true;
+        } else {
+            sliderWrap.classList.remove('flicker');
+            gsap.to(sliderWrap,{opacity:0,duration:0.3});
+            sliderWrap.style.pointerEvents='none';
+            travelLines.visible=false;
+            sliderInput.value='0';
+            applySeparation(0);
+        }
+    }
+    if(e.code==='Escape')deselect();
+    if(e.code==='KeyX'){ spawnShip(); }
+});
+
+// ─── SPACE INVADER EASTER EGG ──────────────────────────────────────────────────
+
+const MAX_SHIPS   = 5;
+const LASER_MS    = 125; // laser travel time — 125ms
+const shipLayer   = document.getElementById('spaceship-layer');
+
+// Bounding box of all geometry — computed once after load, used to keep ships outside
+let geoBBox   = new THREE.Box3();
+let geoExclusionRadius = 0; // 4× max half-extent of bounding box (XZ plane)
+
+function computeGeoExclusion(){
+    geoBBox = new THREE.Box3();
+    Object.values(registry).forEach(e=>e.meshes.forEach(({mesh})=>geoBBox.expandByObject(mesh)));
+    if(!geoBBox.isEmpty()){
+        const sz = new THREE.Vector3();
+        geoBBox.getSize(sz);
+        // 4× the largest horizontal half-extent
+        geoExclusionRadius = 4 * Math.max(sz.x, sz.z) / 2;
+    }
+}
+
+// ── Laser canvas overlay ─────────────────────────────────────────────────────
+const laserCanvas = document.createElement('canvas');
+laserCanvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:249;';
+laserCanvas.width  = innerWidth;
+laserCanvas.height = innerHeight;
+document.body.appendChild(laserCanvas);
+const laserCtx = laserCanvas.getContext('2d');
+window.addEventListener('resize',()=>{
+    laserCanvas.width  = innerWidth;
+    laserCanvas.height = innerHeight;
+});
+
+// ── Active lasers ─────────────────────────────────────────────────────────────
+// { sx,sy, ex,ey, startTime, duration }
+const activeLasers = [];
+
+// ── Ship pool ─────────────────────────────────────────────────────────────────
+// Each ship: { el, hp, alive, fadingIn, opacity, frame, animInterval,
+//              worldPos, localPos,
+//              paraStart, paraEnd, paraApex, paraT, paraSpeed, paraDone }
+const ships = [];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+// Quadratic Bezier
+function bezier3(A, B, C, t, out){
+    const s = 1 - t;
+    out.x = s*s*A.x + 2*s*t*B.x + t*t*C.x;
+    out.y = s*s*A.y + 2*s*t*B.y + t*t*C.y;
+    out.z = s*s*A.z + 2*s*t*B.z + t*t*C.z;
+}
+
+// Random point outside the exclusion radius around the building centre
+function randomOrbitPoint(){
+    const angle  = Math.random() * Math.PI * 2;
+    const minR   = geoExclusionRadius > 0 ? geoExclusionRadius : 30;
+    const radius = minR + 8 + Math.random() * 20;
+    const height = 8 + Math.random() * 28;
+    return new THREE.Vector3(
+        Math.cos(angle) * radius,
+        height,
+        Math.sin(angle) * radius
+    );
+}
+
+function newParabolicArc(ship, fromLocal){
+    ship.paraStart.copy(fromLocal || randomOrbitPoint());
+    ship.paraEnd.copy(randomOrbitPoint());
+    ship.paraApex.lerpVectors(ship.paraStart, ship.paraEnd, 0.5);
+    ship.paraApex.y += 8 + Math.random() * 18;
+    ship.paraT    = 0;
+    ship.paraDone = false;
+    ship.paraSpeed = 0.00012 + Math.random() * 0.00010;
+}
+
+// Project 3D world pos → 2D screen px (shared scratch vec)
+const _ndcVec = new THREE.Vector3();
+function worldToScreen(worldPos){
+    _ndcVec.copy(worldPos).project(camera);
+    return {
+        x: (_ndcVec.x * 0.5 + 0.5) * innerWidth,
+        y: (-_ndcVec.y * 0.5 + 0.5) * innerHeight,
+        behindCam: _ndcVec.z > 1,
+        ndcZ: _ndcVec.z,
+    };
+}
+
+// ── Spawn a new ship ──────────────────────────────────────────────────────────
+function spawnShip(){
+    // Count living ships (not yet exploded)
+    const alive = ships.filter(s=>s.alive).length;
+    if(alive >= MAX_SHIPS) return;
+
+    const ship = {
+        el:           null,
+        hp:           2,
+        alive:        true,
+        fadingIn:     true,
+        opacity:      0,
+        frame:        0,
+        animInterval: null,
+        worldPos:     new THREE.Vector3(),
+        localPos:     new THREE.Vector3(),
+        paraStart:    new THREE.Vector3(),
+        paraEnd:      new THREE.Vector3(),
+        paraApex:     new THREE.Vector3(),
+        paraT:        0,
+        paraSpeed:    0.00014,
+        paraDone:     false,
+    };
+    ships.push(ship);
+
+    // Ensure exclusion radius is computed
+    if(geoExclusionRadius === 0) computeGeoExclusion();
+
+    newParabolicArc(ship, null);
+
+    // DOM
+    ship.el = document.createElement('div');
+    ship.el.className = 'spaceship-el';
+    ship.el.style.opacity = '0';
+    ship.el.innerHTML = `
+        <div class="spaceship-label">HOSTILE · CLASS-I</div>
+        <div class="spaceship-hpbar"><div class="spaceship-hpfill" style="width:100%"></div></div>
+        <img class="spaceship-img" src="spaceship_frame1.svg" alt="enemy">
+    `;
+    shipLayer.appendChild(ship.el);
+
+    // 12fps sprite flip
+    ship.animInterval = setInterval(()=>{
+        if(!ship.alive) return;
+        ship.frame = 1 - ship.frame;
+        const img = ship.el?.querySelector('.spaceship-img');
+        if(img) img.src = ship.frame === 0 ? 'spaceship_frame1.svg' : 'spaceship_frame2.svg';
+    }, 1000/12);
+
+    // Click → laser + delayed hit
+    ship.el.addEventListener('pointerdown', (e)=>{
+        e.stopPropagation();
+        if(!ship.alive) return;
+        shootLaser(ship);
+        setTimeout(()=>{ if(ship.alive) hitShip(ship); }, LASER_MS);
+    });
+}
+
+function hitShip(ship){
+    ship.hp--;
+    const fill = ship.el?.querySelector('.spaceship-hpfill');
+    if(fill) fill.style.width = (ship.hp <= 0 ? 0 : 50) + '%';
+    if(ship.hp <= 0) destroyShip(ship);
+}
+
+function destroyShip(ship){
+    ship.alive = false;
+    clearInterval(ship.animInterval);
+    incrementKills();
+
+    const img = ship.el?.querySelector('.spaceship-img');
+    if(img){
+        img.src = 'explosion.gif';
+        img.style.width = '72px';
+        img.style.filter = 'drop-shadow(0 0 16px rgba(255,100,0,1))';
+    }
+    const label = ship.el?.querySelector('.spaceship-label');
+    if(label) label.textContent = '— NEUTRALIZED —';
+    const hp = ship.el?.querySelector('.spaceship-hpbar');
+    if(hp) hp.style.opacity = '0';
+
+    // Remove DOM + pool entry after explosion plays
+    setTimeout(()=>{
+        ship.el?.remove();
+        const idx = ships.indexOf(ship);
+        if(idx !== -1) ships.splice(idx, 1);
+    }, 1200);
+}
+
+// ── Kill counter ──────────────────────────────────────────────────────────────
+let killCount = 0;
+const killCounterEl    = document.getElementById('kill-counter');
+const killCounterValue = document.getElementById('kill-counter-value');
+const killCounterBar   = document.getElementById('kill-counter-bar');
+
+function incrementKills(){
+    killCount++;
+    // Show on first kill
+    if(killCount === 1) killCounterEl.classList.add('visible');
+
+    // Zero-padded to 3 digits
+    killCounterValue.textContent = String(killCount).padStart(3,'0');
+
+    // Flash the number amber then back to cyan
+    killCounterValue.classList.remove('kill-flash');
+    void killCounterValue.offsetWidth; // reflow to restart animation
+    killCounterValue.classList.add('kill-flash');
+
+    // Bar pulse: reset width then re-apply to retrigger transition
+    killCounterBar.classList.remove('pulse');
+    void killCounterBar.offsetWidth;
+    killCounterBar.classList.add('pulse');
+}
+
+// Continuous spawn timer — first ship at 5s, then one every 13s
+function startSpawnCycle(){
+    setTimeout(()=>{
+        spawnShip();
+        setInterval(()=>{ spawnShip(); }, 15000);
+    }, 5000);
+}
+
+// ── Laser ─────────────────────────────────────────────────────────────────────
+function shootLaser(ship){
+    const sx = innerWidth  / 2;
+    const sy = innerHeight / 2;
+    const sc = worldToScreen(ship.worldPos);
+    activeLasers.push({
+        sx, sy,
+        ex: sc.x, ey: sc.y,
+        startTime: performance.now(),
+        duration:  LASER_MS,
+    });
+}
+
+function updateLasers(now){
+    laserCtx.clearRect(0, 0, laserCanvas.width, laserCanvas.height);
+    for(let i = activeLasers.length - 1; i >= 0; i--){
+        const l   = activeLasers[i];
+        const age = (now - l.startTime) / l.duration;
+        if(age >= 1){ activeLasers.splice(i,1); continue; }
+
+        const tipX = l.sx + (l.ex - l.sx) * age;
+        const tipY = l.sy + (l.ey - l.sy) * age;
+        const tailAge = Math.max(0, age - 0.28);
+        const tailX = l.sx + (l.ex - l.sx) * tailAge;
+        const tailY = l.sy + (l.ey - l.sy) * tailAge;
+        const alpha = age > 0.8 ? 1 - (age - 0.8) / 0.2 : 1;
+
+        // Glow
+        laserCtx.save();
+        laserCtx.globalAlpha = alpha * 0.35;
+        laserCtx.strokeStyle = '#ff8800';
+        laserCtx.lineWidth = 6;
+        laserCtx.shadowColor = '#ff4400';
+        laserCtx.shadowBlur  = 18;
+        laserCtx.lineCap = 'round';
+        laserCtx.beginPath();
+        laserCtx.moveTo(tailX, tailY);
+        laserCtx.lineTo(tipX,  tipY);
+        laserCtx.stroke();
+        laserCtx.restore();
+
+        // Core
+        laserCtx.save();
+        laserCtx.globalAlpha = alpha;
+        laserCtx.strokeStyle = '#ff2200';
+        laserCtx.lineWidth = 2;
+        laserCtx.shadowColor = '#ff6600';
+        laserCtx.shadowBlur  = 8;
+        laserCtx.lineCap = 'round';
+        laserCtx.beginPath();
+        laserCtx.moveTo(tailX, tailY);
+        laserCtx.lineTo(tipX,  tipY);
+        laserCtx.stroke();
+        laserCtx.restore();
+
+        // Tip spark
+        laserCtx.save();
+        laserCtx.globalAlpha = alpha * 0.9;
+        const g = laserCtx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 10);
+        g.addColorStop(0,   'rgba(255,255,180,0.95)');
+        g.addColorStop(0.4, 'rgba(255,80,0,0.6)');
+        g.addColorStop(1,   'rgba(255,0,0,0)');
+        laserCtx.fillStyle = g;
+        laserCtx.beginPath();
+        laserCtx.arc(tipX, tipY, 10, 0, Math.PI*2);
+        laserCtx.fill();
+        laserCtx.restore();
+    }
+}
+
+// ── Per-frame ship update ─────────────────────────────────────────────────────
+function updateAllShips(dtMs){
+    programGroup.updateMatrixWorld(false);
+
+    for(const ship of ships){
+        if(!ship.alive || !ship.el) continue;
+
+        // Advance parabolic arc
+        if(!ship.paraDone){
+            ship.paraT += ship.paraSpeed * dtMs;
+            if(ship.paraT >= 1){ ship.paraT = 1; ship.paraDone = true; }
+            bezier3(ship.paraStart, ship.paraApex, ship.paraEnd, ship.paraT, ship.localPos);
+        } else {
+            newParabolicArc(ship, ship.localPos.clone());
+        }
+
+        // Local → world
+        ship.worldPos.copy(ship.localPos).applyMatrix4(programGroup.matrixWorld);
+
+        // Screen projection
+        const sc = worldToScreen(ship.worldPos);
+
+        // Always visible — no behind-cam hiding, no occlusion culling
+        if(sc.behindCam){
+            // Still fade in even if behind cam; just keep last position
+            // Don't move the element, let it stay where it was
+        } else {
+            ship.el.style.left = sc.x + 'px';
+            // Anchor top of ship image at projected Y (transform-origin is top center)
+            ship.el.style.top  = sc.y + 'px';
+        }
+
+        // Fade-in over 2 seconds
+        if(ship.fadingIn){
+            ship.opacity = Math.min(1, ship.opacity + dtMs / 2000);
+            if(ship.opacity >= 1){ ship.opacity = 1; ship.fadingIn = false; }
+        }
+
+        // Perspective scale — applied to transform, anchored at top
+        const depth = sc.ndcZ ?? 0;
+        const scale = Math.max(0.5, Math.min(1.4, 1 - depth * 0.3));
+        ship.el.style.opacity   = String(ship.opacity);
+        ship.el.style.transform = `translateX(-50%) scaleX(${scale}) scaleY(${scale})`;
+    }
+}
+
+// ─── Render loop ──────────────────────────────────────────────────────────────
+let _lastT = 0;
+function animate(t){
+    requestAnimationFrame(animate);
+    const dt = _lastT > 0 ? Math.min(t - _lastT, 50) : 16;
+    _lastT = t;
+
+    if(cloudMaterial) cloudMaterial.uniforms.uTime.value = t * 0.001;
+    programGroup.rotation.y += 0.00018;
+    starContainer.position.copy(camera.position);
+    syncHitProxies();
+    hitProxyGroup.updateMatrixWorld(true);
+    controls.update();
+    updateAllShips(dt);
+    updateLasers(t);
+    renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+    camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+});
+</script>
 </body>
 </html>
